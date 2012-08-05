@@ -1,14 +1,17 @@
 #include <SPI.h>
 #include <WiFly.h>
 
-char* ssid = "ssid";
-char* pass = "pass";
+char* ssid = "becherovka";
+char* pass = "my5up3rDS";
 
-char* server = "your-server-ip";
+char* server = "192.168.0.23";
 int port = 7001;
 int temp1Pin = 3;
-int filterCycles = 15;
+int filterCycles = 60;
+int filterCount = 0;
+float filteredTempC = 0;
 float lastCycleTemp = 0.0;
+bool sendData = false;
 
 WiFlyClient client;
 
@@ -29,31 +32,39 @@ void loop() {
   // Loop
 
   float tempC = readTemp();
+  
+  if(filterCount < filterCycles) {
+    filteredTempC += tempC;
+    filterCount += 1;
+  } else {
+    tempC = filteredTempC / 60.0;
+    filteredTempC = 0.0;
+    filterCount = 0;
+    sendData = true;
+  }
+
+if(client.connected() && sendData == true) {
+
   float tempF = (tempC * 9.0 / 5.0) + 32.0;
 
-  if(client.connected()) {
-    //Serial.println("Connected to client");
+  // Sending
+  // {
+  //   "tempC": "50.0",
+  //   "tempF": "150.0"
+  // }
 
-    // Sending
-    // {
-    //   "tempC": "50.0",
-    //   "tempF": "150.0"
-    // }
-
-    if(lastCycleTemp != tempC) {
-      Serial.print("{\"tempC\": \"");
-      Serial.print(tempC);
-      Serial.print("\", \"tempF\": \"");
-      Serial.print(tempF);
-      Serial.println("\"}");
-    }
-  }
+  Serial.print("{\"tempC\": \"");
+  Serial.print(tempC);
+  Serial.print("\", \"tempF\": \"");
+  Serial.print(tempF);
+  Serial.println("\"}");
+  
+  sendData = false;
+ }
 
   if(client.available()) {
     Serial.println("Client available");
   }
-
-  lastCycleTemp = tempC;
 
   delay(1000);
 }
